@@ -1,1 +1,1 @@
-Smart Image Processing Application (Study Project)
+# Smart Image Processing Application (Study Project)

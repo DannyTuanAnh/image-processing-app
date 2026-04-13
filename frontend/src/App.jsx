@@ -1,9 +1,8 @@
-import "./App.css";
 import { useState } from "react";
 import ImagePreview from "./components/ImagePreview";
 import UploadForm from "./components/UploadForm";
 import Gallery from "./components/Gallery";
-import { Status, ProcessingOptions } from "./utils/constant";
+import { Status } from "./utils/constant";
 
 function App() {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -69,7 +68,7 @@ function App() {
           <Gallery processedImage={processedImage} />
         </div>
       </main>
-      <footer className="h-16 flex items-center justify-center border-t border-gray-300 bg-white w-full">
+      <footer className="p-4 flex items-center justify-center border-t border-gray-300 bg-white w-full">
         <p className="text-sm text-gray-500">
           &copy; 2024 Image Processor. All rights reserved.
         </p>

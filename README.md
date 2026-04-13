@@ -121,7 +121,9 @@ React → Java API → Storage → Cloud Function → Storage
 4. Chi tiết triển khai
 
 - upload ảnh
-- xử lý ảnh (resize, thumbnail)
+- xử lý ảnh (resize, thumbnail 100x100px)
+- Phát hiện ảnh vi phạm cộng đồng
+-
 
 5. Kết quả
 

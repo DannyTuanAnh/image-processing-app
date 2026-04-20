@@ -15,7 +15,7 @@ import java.util.List;
         {
             CorsConfiguration config = new CorsConfiguration();
 
-            config.setAllowedOrigins(List.of("http://localhost:3000"));
+            config.setAllowedOrigins(List.of("http://localhost:5713"));
             config.setAllowedHeaders(List.of("*"));
             config.setAllowedMethods(List.of("*"));
             UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

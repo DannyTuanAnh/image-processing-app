@@ -1,9 +1,6 @@
 package picload.example.upload.picture.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -26,4 +23,7 @@ public class File {
     String contentType;
     Long size;
     LocalDateTime createdAt;
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
+    byte[] data;
 }

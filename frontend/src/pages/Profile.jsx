@@ -1,37 +1,8 @@
-import { useEffect, useState } from "react";
-import { Flag, Trash2 } from "lucide-react";
+import { useUpload } from "../context/UploadContext";
+import { Flag, Trash2, X } from "lucide-react";
 
 export default function Profile() {
-  const [items, setItems] = useState([]);
-
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("uploadedImages") || "[]");
-      setItems(saved);
-    } catch (err) {
-      console.error("Failed to load uploaded images", err);
-    }
-  }, []);
-
-  const toggleReport = (id) => {
-    setItems((prev) => {
-      const next = prev.map((it) =>
-        it.id === id ? { ...it, reported: !it.reported } : it,
-      );
-      try {
-        localStorage.setItem("uploadedImages", JSON.stringify(next));
-      } catch (err) {
-        console.error("Failed to update report state", err);
-      }
-      return next;
-    });
-  };
-
-  const clearHistory = () => {
-    if (!confirm("Xác nhận xóa toàn bộ lịch sử tải lên?")) return;
-    localStorage.removeItem("uploadedImages");
-    setItems([]);
-  };
+  const { items, clearHistory, toggleReport, handleDelete } = useUpload();
 
   return (
     <div className="mt-20 px-4">
@@ -58,7 +29,7 @@ export default function Profile() {
             {items.map((it) => (
               <div
                 key={it.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
+                className="bg-white rounded-lg shadow-md overflow-hidden relative group"
               >
                 <div className="relative h-48 bg-gray-100 flex items-center justify-center">
                   <img
@@ -66,20 +37,29 @@ export default function Profile() {
                     alt="uploaded"
                     className="object-contain h-full w-full"
                   />
-                  <button
-                    className={`absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-1 rounded ${
-                      it.reported
-                        ? "bg-yellow-400 text-white"
-                        : "bg-gray-800 text-white"
-                    }`}
-                    onClick={() => toggleReport(it.id)}
-                    title={it.reported ? "Đã báo cáo" : "Báo cáo"}
-                  >
-                    <Flag size={16} />
-                    <span className="text-sm">
-                      {it.reported ? "Đã báo" : "Báo"}
-                    </span>
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded ${
+                        it.reported
+                          ? "bg-yellow-400 text-white"
+                          : "bg-gray-800 text-white"
+                      }`}
+                      onClick={() => toggleReport(it.id)}
+                      title={it.reported ? "Đã báo cáo" : "Báo cáo"}
+                    >
+                      <Flag size={16} />
+                      <span className="text-sm">
+                        {it.reported ? "Đã báo" : "Báo"}
+                      </span>
+                    </button>
+                    <button
+                      className="bg-red-500 text-white p-1 rounded hover:bg-red-600"
+                      onClick={() => handleDelete(it.id)}
+                      title="Xóa ảnh"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
                 <div className="p-3">
                   <p className="text-sm text-gray-600 mb-1">

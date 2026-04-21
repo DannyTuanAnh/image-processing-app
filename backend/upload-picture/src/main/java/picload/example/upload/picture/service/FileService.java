@@ -2,6 +2,7 @@ package picload.example.upload.picture.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,13 +26,13 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.StorageException;
-import com.google.cloud.storage.WriteChannel;
 
 @Service
 @RequiredArgsConstructor
@@ -78,15 +79,11 @@ public class FileService {
     }
 
     private Storage connectGCS() {
-        String serviceAccountKey = "java/picload/example/upload/picture/certs/gcs/serviceAccount.json";
         try {
-            if (serviceAccountKey != null && !serviceAccountKey.isBlank()) {
-                try (FileInputStream fis = new FileInputStream(serviceAccountKey)) {
-                    ServiceAccountCredentials creds = ServiceAccountCredentials.fromStream(fis);
-                    return StorageOptions.newBuilder().setCredentials(creds).build().getService();
-                }
-            } else {
-                return StorageOptions.getDefaultInstance().getService();
+            ClassPathResource resource = new ClassPathResource("certs/gcs/serviceAccount.json");
+            try (InputStream fis = resource.getInputStream()) {
+                ServiceAccountCredentials credentials = ServiceAccountCredentials.fromStream(fis);
+                return StorageOptions.newBuilder().setCredentials(credentials).build().getService();
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to initialize Google Cloud Storage client: " + e.getMessage(), e);

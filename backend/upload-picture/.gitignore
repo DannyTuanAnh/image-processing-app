@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+<<<<<<< HEAD
+=======
+
+#Json key
+*serviceAccount.json
+>>>>>>> e29d5ed (restore local change after remove .git)

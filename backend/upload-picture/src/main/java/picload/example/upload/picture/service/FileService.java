@@ -46,8 +46,10 @@ public class FileService {
         if (!ALLOWED_TYPES_PIC.contains(multipartFile.getContentType())) {
             throw new RuntimeException("Only PNG/JPG allowed");
         }
+        String uuid = UUID.randomUUID().toString();
+
         File file = File.builder()
-                .fileName(multipartFile.getOriginalFilename())
+                .fileName(uuid)
                 .contentType(multipartFile.getContentType())
                 .size(multipartFile.getSize())
                 .createdAt(LocalDateTime.now())
@@ -55,8 +57,8 @@ public class FileService {
                 .build();
         File saved = fileRepository.save(file);
         // Tao url mau de test-> sau nay thay bang url cloud -> Da thay bang url cloud
-        uploadToGCS(multipartFile, saved.getFileName(), multipartFile.getContentType());
-        String urlRun = "https://image-frontend.duckdns.org/" + saved.getFileName();
+        uploadToGCS(multipartFile, uuid, multipartFile.getContentType());
+        String urlRun = "https://image-frontend.duckdns.org/" + uuid;
         file.setUrl(urlRun);
         return fileMapper.toResponse(saved);
     }

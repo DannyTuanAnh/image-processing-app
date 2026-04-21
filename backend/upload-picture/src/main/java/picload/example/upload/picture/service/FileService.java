@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
-<<<<<<< HEAD
-=======
 
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.WriteChannel;
@@ -14,19 +12,12 @@ import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
 
->>>>>>> e29d5ed (restore local change after remove .git)
 import picload.example.upload.picture.dto.request.FileUploadRequest;
 import picload.example.upload.picture.dto.response.FileUploadResponse;
 import picload.example.upload.picture.entity.File;
 import picload.example.upload.picture.mapper.FileMapper;
 import picload.example.upload.picture.repository.FileRepository;
 
-<<<<<<< HEAD
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.List;
-
-=======
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +32,6 @@ import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.WriteChannel;
 
->>>>>>> e29d5ed (restore local change after remove .git)
 @Service
 @RequiredArgsConstructor
 public class FileService {
@@ -50,47 +40,6 @@ public class FileService {
     public static final List<String> ALLOWED_TYPES_PIC = List.of("image/png", "image/jpeg");
 
     public FileUploadResponse upload(MultipartFile multipartFile) throws IOException {
-<<<<<<< HEAD
-            if(!ALLOWED_TYPES_PIC.contains(multipartFile.getContentType()))
-            {
-                throw new RuntimeException("Only PNG/JPG allowed");
-            }
-            File file = File.builder()
-                    .fileName(multipartFile.getOriginalFilename())
-                    .contentType(multipartFile.getContentType())
-                    .size(multipartFile.getSize())
-                    .createdAt(LocalDateTime.now())
-                    .data(multipartFile.getBytes())
-                    .build();
-            File saved = fileRepository.save(file);
-            //Tao url mau de test-> sau nay thay bang url cloud
-            String urlRun = "http://localhost:8090/upload/files/" + saved.getId();
-            file.setUrl(urlRun);
-            return fileMapper.toResponse(saved);
-        }
-
-    public File getImage(String id)
-    {
-        return fileRepository.findById(id).orElseThrow(()-> new RuntimeException("IMG not exist!"));
-    }
-
-    public FileUploadResponse getImageInfo(String id)
-    {
-        return fileMapper.toResponse(fileRepository.findById(id).orElseThrow(()
-                -> new RuntimeException("Image is not exist")));
-    }
-
-    public List<FileUploadResponse> getAllImage()
-    {
-        return fileMapper.toListFileUploadResponse(fileRepository.findAll());
-    }
-
-    public void deleteImage(String id)
-    {
-        fileRepository.deleteById(id);
-    }
-
-=======
         if (!ALLOWED_TYPES_PIC.contains(multipartFile.getContentType())) {
             throw new RuntimeException("Only PNG/JPG allowed");
         }
@@ -164,5 +113,4 @@ public class FileService {
         }
     }
 
->>>>>>> e29d5ed (restore local change after remove .git)
 }

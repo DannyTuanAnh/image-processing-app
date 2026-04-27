@@ -20,6 +20,10 @@ export const Status = {
     message: "Xử lý ảnh hoàn tất!",
     color: "text-green-600",
   },
+  error: {
+    message: "Đã xảy ra lỗi khi xử lý. Vui lòng thử lại.",
+    color: "text-red-600",
+  },
 };
 
 export const ProcessingOptions = [

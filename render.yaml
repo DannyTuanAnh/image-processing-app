@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: image-processing-backend
+    runtime: docker
+    dockerfilePath: backend/upload-picture/Dockerfile
+    region: singapore
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: mysql-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+
+databases:
+  - name: mysql-db
+    engine: mysql
+    version: "8.0"
+    plan: starter

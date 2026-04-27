@@ -1,4 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:8090/upload";
 
 /**
  * Upload an image file to the backend.
@@ -37,7 +40,7 @@ export async function getAllImages() {
 
 /**
  * Delete an image by ID.
- * @param {string} id 
+ * @param {string} id
  * @returns {Promise<string>} response message from backend
  */
 export async function deleteImage(id) {

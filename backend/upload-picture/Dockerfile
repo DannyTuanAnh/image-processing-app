@@ -5,12 +5,12 @@ FROM maven:3.9.4-eclipse-temurin-17 as build
 WORKDIR /workspace
 
 # copy only pom first to leverage docker layer cache for dependencies
-COPY pom.xml .
-COPY mvnw mvnw
-COPY .mvn .mvn
+COPY backend/upload-picture/pom.xml .
+COPY backend/upload-picture/mvnw mvnw
+COPY backend/upload-picture/.mvn .mvn
 
 # copy source
-COPY src ./src
+COPY backend/upload-picture/src ./src
 
 # package the application (skip tests for faster builds)
 RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package

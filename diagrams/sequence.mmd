@@ -1,0 +1,29 @@
+sequenceDiagram
+    actor U as Người dùng (React)
+    participant B as Backend (Spring Boot)
+    participant GCS as Cloud Storage (Raw)
+    participant CF as Cloud Function (Go)
+    participant V as Vision API
+    participant R as Redis Pub/Sub
+
+    U->>B: POST /files/upload
+    B->>GCS: Upload ảnh lên bucket
+    GCS-->>B: Hoàn tất
+    B-->>U: Trả về URL tạm thời
+    
+    GCS-)CF: Event Trigger: Object Finalize
+    activate CF
+    CF->>V: Gọi hàm DetectSafeSearch
+    activate V
+    V-->>CF: Kết quả (Adult, Violence...)
+    deactivate V
+    
+    alt Có vi phạm
+        CF->>GCS: Xoá ảnh khỏi bucket Raw
+        CF->>R: Publish status="rejected"
+    else An toàn
+        CF->>GCS: Copy sang bucket Processed
+        CF->>GCS: Xoá ảnh ở bucket Raw
+        CF->>R: Publish status="processed"
+    end
+    deactivate CF

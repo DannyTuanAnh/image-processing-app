@@ -1,0 +1,15 @@
+flowchart TD
+    Client[Frontend: ReactJS] <-->|REST API| Server[Backend: Spring Boot]
+    Server -->|Lưu Metadata| DB[(MySQL Database)]
+    Server -->|Upload Data| GCS_Raw[GCS: Raw Bucket]
+    
+    subgraph Google Cloud Platform
+        GCS_Raw -->|Trigger Event| CF[Cloud Function: Golang]
+        CF <-->|Phân tích ảnh| Vision[Cloud Vision API]
+        CF -->|Xoá ảnh| GCS_Raw
+        CF -->|Chuyển file an toàn| GCS_Proc[GCS: Processed Bucket]
+        CF -->|Invalidate Cache| CDN[Cloud CDN]
+    end
+    
+    CF -->|Publish Message| Redis[(Redis Pub/Sub)]
+    Redis -->|Nhận thông báo| Server

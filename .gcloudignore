@@ -1,0 +1,53 @@
+# Git files
+
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor files
+
+.vscode
+.idea
+_.swp
+_.swo
+\*~
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Documentation
+
+\*.md
+docs/
+
+# Frontend (we're deploying backend only)
+
+frontend/
+
+# Cloud function
+
+cloud-function/
+
+# Environment and config files
+
+.env
+.env.local
+
+# Node modules (frontend)
+
+node_modules/
+
+# Dependencies
+
+.m2/
+
+# Build outputs
+
+target/
+build/
+
+# Cache files
+
+\*.log

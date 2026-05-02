@@ -1,0 +1,30 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Maven
+target
+.m2
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+HELP.md
+
+# Environment files
+.env
+.env.local
+
+# Build files
+*.jar.original

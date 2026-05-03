@@ -1,117 +1,127 @@
 package picload.example.upload.picture.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.google.auth.oauth2.ServiceAccountCredentials;
-import com.google.cloud.WriteChannel;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.StorageException;
-import com.google.cloud.storage.StorageOptions;
-
-import picload.example.upload.picture.dto.request.FileUploadRequest;
-import picload.example.upload.picture.dto.response.FileUploadResponse;
-import picload.example.upload.picture.entity.File;
-import picload.example.upload.picture.mapper.FileMapper;
-import picload.example.upload.picture.repository.FileRepository;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.StorageException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import picload.example.upload.picture.dto.response.FileUploadResponse;
+import picload.example.upload.picture.entity.File;
+import picload.example.upload.picture.mapper.FileMapper;
+import picload.example.upload.picture.repository.FileRepository;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class FileService {
+
     private final FileRepository fileRepository;
     private final FileMapper fileMapper;
-    public static final List<String> ALLOWED_TYPES_PIC = List.of("image/png", "image/jpeg");
 
-    public FileUploadResponse upload(MultipartFile multipartFile) throws IOException {
-        if (!ALLOWED_TYPES_PIC.contains(multipartFile.getContentType())) {
+    private static final String BUCKET_NAME = "chat-app-avt-images-raw";
+    private static final List<String> ALLOWED_TYPES_PIC =
+            List.of("image/png", "image/jpeg");
+
+    // ========================= UPLOAD =========================
+    public FileUploadResponse upload(MultipartFile file) {
+
+        if (file.isEmpty()) {
+            throw new RuntimeException("File is empty");
+        }
+
+        if (!ALLOWED_TYPES_PIC.contains(file.getContentType())) {
             throw new RuntimeException("Only PNG/JPG allowed");
         }
+
         String uuid = UUID.randomUUID().toString();
 
-        File file = File.builder()
+        // 1. Upload GCS trước
+        uploadToGCS(file, uuid, file.getContentType());
+
+        // 2. URL thật từ GCS
+        String url = String.format(
+                "https://storage.googleapis.com/%s/%s",
+                BUCKET_NAME,
+                uuid
+        );
+
+        // 3. Lưu DB (backup luôn bytes)
+        File entity = File.builder()
                 .fileName(uuid)
-                .contentType(multipartFile.getContentType())
-                .size(multipartFile.getSize())
+                .contentType(file.getContentType())
+                .size(file.getSize())
                 .createdAt(LocalDateTime.now())
-                .data(multipartFile.getBytes())
+                .url(url)
+                .data(getBytesSafely(file)) // backup
                 .build();
-        File saved = fileRepository.save(file);
-        // Tao url mau de test-> sau nay thay bang url cloud -> Da thay bang url cloud
-        uploadToGCS(multipartFile, uuid, multipartFile.getContentType());
-        String urlRun = "https://image-frontend.duckdns.org/" + uuid;
-        file.setUrl(urlRun);
+
+        File saved = fileRepository.save(entity);
+
         return fileMapper.toResponse(saved);
     }
 
+    // ========================= GET =========================
     public File getImage(String id) {
-        return fileRepository.findById(id).orElseThrow(() -> new RuntimeException("IMG not exist!"));
-    }
-
-    public FileUploadResponse getImageInfo(String id) {
-        return fileMapper
-                .toResponse(fileRepository.findById(id).orElseThrow(() -> new RuntimeException("Image is not exist")));
+        return fileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("IMG not exist!"));
     }
 
     public List<FileUploadResponse> getAllImage() {
         return fileMapper.toListFileUploadResponse(fileRepository.findAll());
     }
 
+    public FileUploadResponse getImageInfo(String id) {
+        return fileMapper.toResponse(
+                fileRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Image not exist"))
+        );
+    }
+
+    // ========================= DELETE =========================
     public void deleteImage(String id) {
         fileRepository.deleteById(id);
     }
 
-    private Storage connectGCS() {
-        try {
-            ClassPathResource resource = new ClassPathResource("certs/gcs/serviceAccount.json");
-            try (InputStream fis = resource.getInputStream()) {
-                ServiceAccountCredentials credentials = ServiceAccountCredentials.fromStream(fis);
-                return StorageOptions.newBuilder().setCredentials(credentials).build().getService();
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to initialize Google Cloud Storage client: " + e.getMessage(), e);
-        }
+    // ========================= GCS =========================
+    private Storage getStorage() {
+        // Cloud Run: tự dùng service account của GCP (KHÔNG cần json)
+        return StorageOptions.getDefaultInstance().getService();
     }
 
-    private void uploadToGCS(MultipartFile file, String objectName, String contentType) throws IOException {
-        String bucketName = "chat-app-avt-images-raw";
+    private void uploadToGCS(MultipartFile file, String objectName, String contentType) {
+        Storage storage = getStorage();
 
-        Storage storage = connectGCS();
-        BlobId blobId = BlobId.of(bucketName, objectName);
+        BlobId blobId = BlobId.of(BUCKET_NAME, objectName);
+
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                 .setContentType(contentType)
-                .setCacheControl("no-store, max-age=0")
+                .setCacheControl("public, max-age=31536000")
                 .build();
 
-        try (WriteChannel writer = storage.writer(blobInfo);
-                InputStream in = file.getInputStream()) {
-            byte[] buffer = new byte[1024 * 1024];
-            int len;
-            while ((len = in.read(buffer)) > 0) {
-                writer.write(ByteBuffer.wrap(buffer, 0, len));
-            }
+        try {
+            storage.create(blobInfo, file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot read file bytes", e);
         } catch (StorageException e) {
-            throw new RuntimeException("Failed to upload to GCS: " + e.getMessage(), e);
+            throw new RuntimeException("Upload GCS failed: " + e.getMessage(), e);
         }
     }
 
+    // ========================= BACKUP SAFE =========================
+    private byte[] getBytesSafely(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot read file bytes for backup", e);
+        }
+    }
 }

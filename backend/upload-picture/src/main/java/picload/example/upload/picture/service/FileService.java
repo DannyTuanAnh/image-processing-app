@@ -28,34 +28,55 @@ public class FileService {
     private final FileMapper fileMapper;
 
     private static final String BUCKET_NAME = "chat-app-avt-images-raw";
-    private static final List<String> ALLOWED_TYPES_PIC =
-            List.of("image/png", "image/jpeg");
+    private static final List<String> ALLOWED_TYPES_PIC = List.of("image/png", "image/jpeg");
 
-    public FileUploadResponse upload(MultipartFile multipartFile) throws IOException {
-        if (!ALLOWED_TYPES_PIC.contains(multipartFile.getContentType())) {
+    // ========================= UPLOAD =========================
+    public FileUploadResponse upload(MultipartFile file) {
+
+        if (file.isEmpty()) {
+            throw new RuntimeException("File is empty");
+        }
+
+        if (!ALLOWED_TYPES_PIC.contains(file.getContentType())) {
             throw new RuntimeException("Only PNG/JPG allowed");
         }
-        String uuid = UUID.randomUUID().toString();
 
-        File file = File.builder()
-                .fileName(uuid)
-                .contentType(multipartFile.getContentType())
-                .size(multipartFile.getSize())
+        // 1. Lấy đuôi file (Extension) - Rất quan trọng để link ảnh hoạt động
+        String originalName = file.getOriginalFilename();
+        String extension = "";
+        if (originalName != null && originalName.contains(".")) {
+            extension = originalName.substring(originalName.lastIndexOf("."));
+        }
+
+        // 2. Tạo tên file mới: UUID + extension (Ví dụ: 550e8400-e29b.png)
+        String fileNameOnGCS = UUID.randomUUID().toString() + extension;
+
+        // 3. Upload lên Google Cloud Storage trước
+        uploadToGCS(file, fileNameOnGCS, file.getContentType());
+
+        // 4. Tạo URL thật để truy cập ảnh công khai
+        String url = String.format("https://storage.googleapis.com/%s/%s", BUCKET_NAME, fileNameOnGCS);
+
+        // 5. Lưu Metadata vào Cloud SQL (Để .data(null) cho nhẹ database)
+        File entity = File.builder()
+                .fileName(fileNameOnGCS)
+                .contentType(file.getContentType())
+                .size(file.getSize())
                 .createdAt(LocalDateTime.now())
-                .data(multipartFile.getBytes())
+                .url(url)
+                .data(null) // Không lưu byte vào DB để tối ưu dung lượng
                 .build();
-        File saved = fileRepository.save(file);
-        // Tao url mau de test-> sau nay thay bang url cloud -> Da thay bang url cloud
-        uploadToGCS(multipartFile, uuid, multipartFile.getContentType());
-        String urlRun = "https://image-frontend.duckdns.org/" + uuid;
-        file.setUrl(urlRun);
+
+        File saved = fileRepository.save(entity);
+        log.info("Successfully uploaded {} to GCS and saved metadata to DB", fileNameOnGCS);
+
         return fileMapper.toResponse(saved);
     }
 
     // ========================= GET =========================
     public File getImage(String id) {
         return fileRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("IMG not exist!"));
+                .orElseThrow(() -> new RuntimeException("Image not found with id: " + id));
     }
 
     public List<FileUploadResponse> getAllImage() {
@@ -65,46 +86,38 @@ public class FileService {
     public FileUploadResponse getImageInfo(String id) {
         return fileMapper.toResponse(
                 fileRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Image not exist"))
+                        .orElseThrow(() -> new RuntimeException("Image not found with id: " + id))
         );
     }
 
     // ========================= DELETE =========================
     public void deleteImage(String id) {
+        // Lưu ý: Trong thực tế bạn nên xóa cả file trên GCS tại đây
         fileRepository.deleteById(id);
     }
 
-    // ========================= GCS =========================
+    // ========================= GCS CORE LOGIC =========================
     private Storage getStorage() {
-        // Cloud Run: tự dùng service account của GCP (KHÔNG cần json)
+        // Tự động sử dụng quyền của Service Account khi chạy trên Cloud Run
         return StorageOptions.getDefaultInstance().getService();
     }
 
     private void uploadToGCS(MultipartFile file, String objectName, String contentType) {
         Storage storage = getStorage();
-
         BlobId blobId = BlobId.of(BUCKET_NAME, objectName);
-
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
                 .setContentType(contentType)
-                .setCacheControl("public, max-age=31536000")
+                .setCacheControl("public, max-age=31536000") // Cache 1 năm cho hiệu năng tốt
                 .build();
 
         try {
             storage.create(blobInfo, file.getBytes());
         } catch (IOException e) {
+            log.error("Error reading file bytes: {}", e.getMessage());
             throw new RuntimeException("Cannot read file bytes", e);
         } catch (StorageException e) {
+            log.error("GCS Upload Error: {}", e.getMessage());
             throw new RuntimeException("Upload GCS failed: " + e.getMessage(), e);
-        }
-    }
-
-    // ========================= BACKUP SAFE =========================
-    private byte[] getBytesSafely(MultipartFile file) {
-        try {
-            return file.getBytes();
-        } catch (IOException e) {
-            throw new RuntimeException("Cannot read file bytes for backup", e);
         }
     }
 }

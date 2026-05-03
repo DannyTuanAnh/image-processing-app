@@ -61,7 +61,17 @@ public class FileService {
 
         return fileMapper.toResponse(fileRepository.save(entity));
     }
+    public File getImage(String id) {
+        return fileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Image not found with id: " + id));
+    }
 
+    // 2. Hàm lấy DTO để hiển thị thông tin
+    public FileUploadResponse getImageInfo(String id) {
+        File file = fileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Image not found with id: " + id));
+        return fileMapper.toResponse(file);
+    }
     // ========================= GCS LOGIC =========================
     private void uploadToGCS(MultipartFile file, String objectName, String bucketName) {
         Storage storage = StorageOptions.getDefaultInstance().getService();

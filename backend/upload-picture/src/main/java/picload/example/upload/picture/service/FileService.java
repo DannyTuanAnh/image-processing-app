@@ -24,7 +24,7 @@ public class FileService {
     private final FileMapper fileMapper;
 
     private static final String BUCKET_RAW = "chat-app-avt-images-raw";
-    private static final String BUCKET_PROCESSED = "chat-app-avt-images-processed"; 
+    private static final String BUCKET_PROCESSED = "chat-app-processed-avt-image"; 
     private static final List<String> ALLOWED_TYPES = List.of("image/png", "image/jpeg");
 
     // ========================= UPLOAD (RAW -> PROCESSED) =========================

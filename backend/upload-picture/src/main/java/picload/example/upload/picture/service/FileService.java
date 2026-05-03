@@ -1,10 +1,6 @@
 package picload.example.upload.picture.service;
 
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
-import com.google.cloud.storage.StorageException;
+import com.google.cloud.storage.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,97 +23,71 @@ public class FileService {
     private final FileRepository fileRepository;
     private final FileMapper fileMapper;
 
-    private static final String BUCKET_NAME = "chat-app-avt-images-raw";
-    private static final List<String> ALLOWED_TYPES_PIC = List.of("image/png", "image/jpeg");
+    private static final String BUCKET_RAW = "chat-app-avt-images-raw";
+    private static final String BUCKET_PROCESSED = "chat-app-avt-images-processed"; 
+    private static final List<String> ALLOWED_TYPES = List.of("image/png", "image/jpeg");
 
-    // ========================= UPLOAD =========================
+    // ========================= UPLOAD (RAW -> PROCESSED) =========================
     public FileUploadResponse upload(MultipartFile file) {
+        if (file.isEmpty()) throw new RuntimeException("File is empty");
+        if (!ALLOWED_TYPES.contains(file.getContentType())) throw new RuntimeException("Only PNG/JPG allowed");
 
-        if (file.isEmpty()) {
-            throw new RuntimeException("File is empty");
-        }
-
-        if (!ALLOWED_TYPES_PIC.contains(file.getContentType())) {
-            throw new RuntimeException("Only PNG/JPG allowed");
-        }
-
-        // 1. Lấy đuôi file (Extension) - Rất quan trọng để link ảnh hoạt động
-        String originalName = file.getOriginalFilename();
+        // 1. Xử lý đuôi file để link ảnh không bị lỗi
         String extension = "";
+        String originalName = file.getOriginalFilename();
         if (originalName != null && originalName.contains(".")) {
             extension = originalName.substring(originalName.lastIndexOf("."));
         }
+        String fileName = UUID.randomUUID().toString() + extension;
 
-        // 2. Tạo tên file mới: UUID + extension (Ví dụ: 550e8400-e29b.png)
-        String fileNameOnGCS = UUID.randomUUID().toString() + extension;
+        // BƯỚC 1: Đẩy lên Bucket RAW (Ảnh gốc)
+        uploadToGCS(file, fileName, BUCKET_RAW);
 
-        // 3. Upload lên Google Cloud Storage trước
-        uploadToGCS(file, fileNameOnGCS, file.getContentType());
+        // BƯỚC 2: Copy sang Bucket PROCESSED (Ảnh công khai)
+        copyFileBetweenBuckets(fileName, BUCKET_RAW, BUCKET_PROCESSED);
 
-        // 4. Tạo URL thật để truy cập ảnh công khai
-        String url = String.format("https://storage.googleapis.com/%s/%s", BUCKET_NAME, fileNameOnGCS);
+        // BƯỚC 3: Tạo URL dẫn đến ảnh đã xử lý
+        String finalUrl = String.format("https://storage.googleapis.com/%s/%s", BUCKET_PROCESSED, fileName);
 
-        // 5. Lưu Metadata vào Cloud SQL (Để .data(null) cho nhẹ database)
+        // BƯỚC 4: Lưu Metadata vào SQL (data = null để tối ưu DB)
         File entity = File.builder()
-                .fileName(fileNameOnGCS)
+                .fileName(fileName)
                 .contentType(file.getContentType())
                 .size(file.getSize())
                 .createdAt(LocalDateTime.now())
-                .url(url)
-                .data(null) // Không lưu byte vào DB để tối ưu dung lượng
+                .url(finalUrl)
+                .data(null) 
                 .build();
 
-        File saved = fileRepository.save(entity);
-        log.info("Successfully uploaded {} to GCS and saved metadata to DB", fileNameOnGCS);
-
-        return fileMapper.toResponse(saved);
+        return fileMapper.toResponse(fileRepository.save(entity));
     }
 
-    // ========================= GET =========================
-    public File getImage(String id) {
-        return fileRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Image not found with id: " + id));
+    // ========================= GCS LOGIC =========================
+    private void uploadToGCS(MultipartFile file, String objectName, String bucketName) {
+        Storage storage = StorageOptions.getDefaultInstance().getService();
+        BlobId blobId = BlobId.of(bucketName, objectName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(file.getContentType()).build();
+        try {
+            storage.create(blobInfo, file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException("Upload to RAW failed", e);
+        }
     }
 
+    private void copyFileBetweenBuckets(String fileName, String fromBucket, String toBucket) {
+        Storage storage = StorageOptions.getDefaultInstance().getService();
+        storage.copy(Storage.CopyRequest.newBuilder()
+                .setSource(BlobId.of(fromBucket, fileName))
+                .setTarget(BlobId.of(toBucket, fileName))
+                .build()).getResult();
+    }
+
+    // ========================= GET/DELETE =========================
     public List<FileUploadResponse> getAllImage() {
         return fileMapper.toListFileUploadResponse(fileRepository.findAll());
     }
 
-    public FileUploadResponse getImageInfo(String id) {
-        return fileMapper.toResponse(
-                fileRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Image not found with id: " + id))
-        );
-    }
-
-    // ========================= DELETE =========================
     public void deleteImage(String id) {
-        // Lưu ý: Trong thực tế bạn nên xóa cả file trên GCS tại đây
         fileRepository.deleteById(id);
-    }
-
-    // ========================= GCS CORE LOGIC =========================
-    private Storage getStorage() {
-        // Tự động sử dụng quyền của Service Account khi chạy trên Cloud Run
-        return StorageOptions.getDefaultInstance().getService();
-    }
-
-    private void uploadToGCS(MultipartFile file, String objectName, String contentType) {
-        Storage storage = getStorage();
-        BlobId blobId = BlobId.of(BUCKET_NAME, objectName);
-        BlobInfo blobInfo = BlobInfo.newBuilder(blobId)
-                .setContentType(contentType)
-                .setCacheControl("public, max-age=31536000") // Cache 1 năm cho hiệu năng tốt
-                .build();
-
-        try {
-            storage.create(blobInfo, file.getBytes());
-        } catch (IOException e) {
-            log.error("Error reading file bytes: {}", e.getMessage());
-            throw new RuntimeException("Cannot read file bytes", e);
-        } catch (StorageException e) {
-            log.error("GCS Upload Error: {}", e.getMessage());
-            throw new RuntimeException("Upload GCS failed: " + e.getMessage(), e);
-        }
     }
 }

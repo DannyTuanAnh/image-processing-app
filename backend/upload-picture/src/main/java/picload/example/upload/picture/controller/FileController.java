@@ -19,7 +19,10 @@ import java.util.List;
 @RequestMapping("/files")
 public class FileController {
     FileService fileService;
-
+ @GetMapping("/test")
+    public String test() {
+        return "OK FILE CONTROLLER";
+    }
     @PostMapping("/upload")
     public ResponseEntity<FileUploadResponse> upload(@RequestParam("image")MultipartFile image) throws IOException {
         if (image.isEmpty()) {

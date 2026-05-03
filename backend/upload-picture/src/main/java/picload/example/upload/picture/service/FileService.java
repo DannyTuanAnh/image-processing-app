@@ -31,49 +31,26 @@ public class FileService {
     private static final List<String> ALLOWED_TYPES_PIC =
             List.of("image/png", "image/jpeg");
 
-    // ========================= UPLOAD =========================
-    // ========================= UPLOAD (Bản đã Fix) =========================
-public FileUploadResponse upload(MultipartFile file) {
+    public FileUploadResponse upload(MultipartFile multipartFile) throws IOException {
+        if (!ALLOWED_TYPES_PIC.contains(multipartFile.getContentType())) {
+            throw new RuntimeException("Only PNG/JPG allowed");
+        }
+        String uuid = UUID.randomUUID().toString();
 
-    if (file.isEmpty()) {
-        throw new RuntimeException("File is empty");
+        File file = File.builder()
+                .fileName(uuid)
+                .contentType(multipartFile.getContentType())
+                .size(multipartFile.getSize())
+                .createdAt(LocalDateTime.now())
+                .data(multipartFile.getBytes())
+                .build();
+        File saved = fileRepository.save(file);
+        // Tao url mau de test-> sau nay thay bang url cloud -> Da thay bang url cloud
+        uploadToGCS(multipartFile, uuid, multipartFile.getContentType());
+        String urlRun = "https://image-frontend.duckdns.org/" + uuid;
+        file.setUrl(urlRun);
+        return fileMapper.toResponse(saved);
     }
-
-    if (!ALLOWED_TYPES_PIC.contains(file.getContentType())) {
-        throw new RuntimeException("Only PNG/JPG allowed");
-    }
-
-    // 1. Lấy đuôi file gốc (vd: .png)
-    String originalName = file.getOriginalFilename();
-    String extension = "";
-    if (originalName != null && originalName.contains(".")) {
-        extension = originalName.substring(originalName.lastIndexOf("."));
-    }
-
-    // 2. Tạo tên file mới có đuôi: UUID + extension
-    String fileNameOnGCS = UUID.randomUUID().toString() + extension;
-
-    // 3. Upload lên GCS
-    uploadToGCS(file, fileNameOnGCS, file.getContentType());
-
-    // 4. Tạo URL chuẩn
-    String url = String.format("https://storage.googleapis.com/%s/%s", BUCKET_NAME, fileNameOnGCS);
-
-    // 5. Lưu DB (BỎ PHẦN .data(...) ĐỂ NHẸ DB)
-    File entity = File.builder()
-            .fileName(fileNameOnGCS) // Lưu tên file có đuôi vào DB
-            .contentType(file.getContentType())
-            .size(file.getSize())
-            .createdAt(LocalDateTime.now())
-            .url(url)
-            // .data(getBytesSafely(file)) <--- XÓA DÒNG NÀY HOẶC ĐỂ NULL
-            .build();
-
-    File saved = fileRepository.save(entity);
-    log.info("Upload thành công file: {} lên GCS và lưu DB", fileNameOnGCS);
-
-    return fileMapper.toResponse(saved);
-}
 
     // ========================= GET =========================
     public File getImage(String id) {

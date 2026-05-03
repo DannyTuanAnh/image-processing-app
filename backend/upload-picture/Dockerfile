@@ -13,7 +13,7 @@ COPY .mvn .mvn
 COPY src ./src
 
 # Build the application (skip tests for faster builds)
-RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests clean package
+RUN mvn -B -DskipTests clean package
 
 # Runtime stage: use minimal JRE image
 FROM eclipse-temurin:17-jre-jammy

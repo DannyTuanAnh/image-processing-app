@@ -7,14 +7,11 @@ function Home() {
   const {
     selectedImage,
     setSelectedImage,
-    processingOption,
-    setProcessingOption,
     processedImage,
     setProcessedImage,
     status,
     setStatus,
     handleImageChange,
-    handleProcessingOptionChange,
     handleUpload,
   } = useUpload();
 
@@ -31,8 +28,8 @@ function Home() {
           </h1>
 
           <p className="text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            Tải ảnh lên, chọn tùy chọn xử lý và nhận kết quả với giao diện tối
-            giản, hiện đại và tối ưu trải nghiệm người dùng.
+            Tải ảnh lên và xử lý nhanh chóng với giao diện hiện đại, tối ưu trải
+            nghiệm người dùng.
           </p>
         </div>
 
@@ -44,14 +41,11 @@ function Home() {
           />
 
           <UploadForm
-            processingOption={processingOption}
-            setProcessingOption={setProcessingOption}
-            setStatus={setStatus}
-            handleProcessingOptionChange={handleProcessingOptionChange}
             handleUpload={handleUpload}
             handleImageChange={handleImageChange}
             status={status}
             setProcessedImage={setProcessedImage}
+            setStatus={setStatus}
           />
         </div>
 

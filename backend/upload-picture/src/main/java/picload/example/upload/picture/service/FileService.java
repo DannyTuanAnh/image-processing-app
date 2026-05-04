@@ -24,7 +24,6 @@ public class FileService {
     private final FileMapper fileMapper;
 
     private static final String BUCKET_RAW = "chat-app-avt-images-raw";
-    private static final String BUCKET_PROCESSED = "chat-app-processed-avt-image";
     private static final List<String> ALLOWED_TYPES = List.of("image/png", "image/jpeg");
 
     // ========================= UPLOAD (RAW -> PROCESSED) =========================
@@ -49,7 +48,7 @@ public class FileService {
         // copyFileBetweenBuckets(fileName, BUCKET_RAW, BUCKET_PROCESSED);
 
         // BƯỚC 3: Tạo URL dẫn đến ảnh đã xử lý
-        String finalUrl = String.format("https://storage.googleapis.com/%s/%s", BUCKET_PROCESSED, fileName);
+        String finalUrl = String.format("https://image-frontend.duckdns.org/", fileName);
 
         // BƯỚC 4: Lưu Metadata vào SQL (data = null để tối ưu DB)
         File entity = File.builder()

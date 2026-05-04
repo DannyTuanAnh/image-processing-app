@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=build /workspace/target/upload-picture-*.jar app.jar
 
 # Cloud Run requires the application to listen on PORT env variable (default: 8080)
-# Our app uses 8090, so we use SPRING_SERVER_PORT env variable
+# Our app uses 8080, so we use SPRING_SERVER_PORT env variable
 EXPOSE 8080
 
 # Set entry point

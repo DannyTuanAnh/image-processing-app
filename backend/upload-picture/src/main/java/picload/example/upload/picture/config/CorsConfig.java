@@ -9,18 +9,24 @@ import org.springframework.web.filter.CorsFilter;
 import java.util.List;
 
 @Configuration
-    public class CorsConfig {
-        @Bean
-        public CorsFilter corsFilter()
-        {
-            CorsConfiguration config = new CorsConfiguration();
+public class CorsConfig {
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
 
-            config.setAllowedOrigins(List.of("http://localhost:5173"));
-            config.setAllowedHeaders(List.of("*"));
-            config.setAllowedMethods(List.of("*"));
-            config.setAllowCredentials(true);
-            UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-            source.registerCorsConfiguration("/**", config);
-            return new CorsFilter(source);
+        // Works for localhost + any Cloud Run domain
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "https://*.run.app"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowCredentials(true);
+
+        // if frontend needs to read headers (optional)
+        config.setExposedHeaders(List.of("Content-Type", "Content-Disposition"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
     }
-    }
+}

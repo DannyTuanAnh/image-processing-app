@@ -24,13 +24,15 @@ public class FileService {
     private final FileMapper fileMapper;
 
     private static final String BUCKET_RAW = "chat-app-avt-images-raw";
-    private static final String BUCKET_PROCESSED = "chat-app-processed-avt-image"; 
+    private static final String BUCKET_PROCESSED = "chat-app-processed-avt-image";
     private static final List<String> ALLOWED_TYPES = List.of("image/png", "image/jpeg");
 
     // ========================= UPLOAD (RAW -> PROCESSED) =========================
     public FileUploadResponse upload(MultipartFile file) {
-        if (file.isEmpty()) throw new RuntimeException("File is empty");
-        if (!ALLOWED_TYPES.contains(file.getContentType())) throw new RuntimeException("Only PNG/JPG allowed");
+        if (file.isEmpty())
+            throw new RuntimeException("File is empty");
+        if (!ALLOWED_TYPES.contains(file.getContentType()))
+            throw new RuntimeException("Only PNG/JPG allowed");
 
         // 1. Xử lý đuôi file để link ảnh không bị lỗi
         String extension = "";
@@ -44,7 +46,7 @@ public class FileService {
         uploadToGCS(file, fileName, BUCKET_RAW);
 
         // BƯỚC 2: Copy sang Bucket PROCESSED (Ảnh công khai)
-        copyFileBetweenBuckets(fileName, BUCKET_RAW, BUCKET_PROCESSED);
+        // copyFileBetweenBuckets(fileName, BUCKET_RAW, BUCKET_PROCESSED);
 
         // BƯỚC 3: Tạo URL dẫn đến ảnh đã xử lý
         String finalUrl = String.format("https://storage.googleapis.com/%s/%s", BUCKET_PROCESSED, fileName);
@@ -56,11 +58,12 @@ public class FileService {
                 .size(file.getSize())
                 .createdAt(LocalDateTime.now())
                 .url(finalUrl)
-                .data(null) 
+                .data(null)
                 .build();
 
         return fileMapper.toResponse(fileRepository.save(entity));
     }
+
     public File getImage(String id) {
         return fileRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Image not found with id: " + id));
@@ -72,6 +75,7 @@ public class FileService {
                 .orElseThrow(() -> new RuntimeException("Image not found with id: " + id));
         return fileMapper.toResponse(file);
     }
+
     // ========================= GCS LOGIC =========================
     private void uploadToGCS(MultipartFile file, String objectName, String bucketName) {
         Storage storage = StorageOptions.getDefaultInstance().getService();

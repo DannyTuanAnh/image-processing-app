@@ -48,7 +48,7 @@ public class FileService {
         // copyFileBetweenBuckets(fileName, BUCKET_RAW, BUCKET_PROCESSED);
 
         // BƯỚC 3: Tạo URL dẫn đến ảnh đã xử lý
-        String finalUrl = String.format("https://image-frontend.duckdns.org/", fileName);
+        String finalUrl = String.format("https://image-frontend.duckdns.org/%s", fileName);
 
         // BƯỚC 4: Lưu Metadata vào SQL (data = null để tối ưu DB)
         File entity = File.builder()

@@ -1,7 +1,4 @@
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:8090/upload";
+const API_BASE = import.meta.env.VITE_API_URL;
 
 /**
  * Upload an image file to the backend.
@@ -13,7 +10,7 @@ export async function uploadImage(file) {
   const formData = new FormData();
   formData.append("image", file);
 
-  const res = await fetch(`${API_BASE}/files/upload`, {
+  const res = await fetch(`${API_BASE}/upload/files/upload`, {
     method: "POST",
     body: formData,
   });
@@ -31,7 +28,7 @@ export async function uploadImage(file) {
  * @returns {Promise<Array>} array of file response objects
  */
 export async function getAllImages() {
-  const res = await fetch(`${API_BASE}/files`);
+  const res = await fetch(`${API_BASE}/upload/files`);
   if (!res.ok) {
     throw new Error(`Failed to fetch images with status ${res.status}`);
   }
@@ -44,7 +41,7 @@ export async function getAllImages() {
  * @returns {Promise<string>} response message from backend
  */
 export async function deleteImage(id) {
-  const res = await fetch(`${API_BASE}/files/${id}`, {
+  const res = await fetch(`${API_BASE}/upload/files/${id}`, {
     method: "DELETE",
   });
   if (!res.ok) {

@@ -1,5 +1,6 @@
 import { useUpload } from "../context/UploadContext";
 import { Flag, Trash2, X, Image as ImageIcon } from "lucide-react";
+import { formatFileSize } from "../utils/format";
 
 export default function Profile() {
   const { items, clearHistory, toggleReport, handleDelete } = useUpload();
@@ -84,7 +85,7 @@ export default function Profile() {
                 <div className="p-5 space-y-3">
                   <div>
                     <p className="text-sm text-slate-400 mb-1">
-                      Tùy chọn xử lý
+                      size: <span>{formatFileSize(it.size)}</span>
                     </p>
 
                     <div className="flex flex-wrap gap-2">

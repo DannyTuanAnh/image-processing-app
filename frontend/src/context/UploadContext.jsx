@@ -15,6 +15,7 @@ export const UploadProvider = ({ children }) => {
   const fetchImages = async () => {
     try {
       const backendImages = await getAllImages();
+      console.log("backendImages", backendImages);
 
       const merged = backendImages.map((img) => ({
         ...img,

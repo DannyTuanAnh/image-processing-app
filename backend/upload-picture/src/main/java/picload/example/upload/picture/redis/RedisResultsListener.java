@@ -61,7 +61,6 @@ public class RedisResultsListener {
                     payload.put("file_path", claims.get("file_path"));
 
                     String json = objectMapper.writeValueAsString(payload);
-                    broker.broadcast(json);
 
                     log.info("Broadcasting SSE payload: {}", json);
                     broker.broadcast(json);

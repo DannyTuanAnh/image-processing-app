@@ -17,11 +17,11 @@ export const Status = {
     color: "text-yellow-600",
   },
   completed: {
-    message: "Xử lý ảnh hoàn tất!",
+    message: "Xử lý ảnh hoàn tất! Ảnh hợp lệ.",
     color: "text-green-600",
   },
   error: {
-    message: "Đã xảy ra lỗi khi xử lý. Vui lòng thử lại.",
+    message: "Ảnh bị từ chối vì vi phạm tiêu chuẩn cộng đồng.",
     color: "text-red-600",
   },
 };

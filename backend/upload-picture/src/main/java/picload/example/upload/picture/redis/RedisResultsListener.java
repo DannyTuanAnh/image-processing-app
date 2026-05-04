@@ -63,6 +63,9 @@ public class RedisResultsListener {
                     String json = objectMapper.writeValueAsString(payload);
                     broker.broadcast(json);
 
+                    log.info("Broadcasting SSE payload: {}", json);
+                    broker.broadcast(json);
+
                 } catch (Exception e) {
                     log.warn("Invalid JWT or payload. Skipped: {}", e.getMessage());
                 }

@@ -18,22 +18,37 @@ public class SseBroker {
         SseEmitter emitter = new SseEmitter(0L); // no timeout
         clients.add(emitter);
 
-        emitter.onCompletion(() -> clients.remove(emitter));
-        emitter.onTimeout(() -> clients.remove(emitter));
-        emitter.onError(e -> clients.remove(emitter));
+        emitter.onCompletion(() -> {
+            clients.remove(emitter);
+            log.info("SSE client disconnected. Total: {}", clients.size());
+        });
+        emitter.onTimeout(() -> {
+            clients.remove(emitter);
+            log.info("SSE client timeout. Total: {}", clients.size());
+        });
+
+        emitter.onError(e -> {
+            clients.remove(emitter);
+            log.warn("SSE client error: {}. Total: {}", e.getMessage(), clients.size());
+        });
 
         return emitter;
     }
 
     public void broadcast(String data) {
-        for (SseEmitter emitter : clients) {
+        clients.removeIf(emitter -> {
             try {
-                emitter.send(SseEmitter.event().name("message").data(data));
+                // IMPORTANT:
+                // send default SSE event => frontend receives via es.onmessage
+                emitter.send(SseEmitter.event().data(data));
+                return false;
             } catch (IOException ex) {
-                clients.remove(emitter);
+                log.warn("Removing dead SSE client: {}", ex.getMessage());
+                return true;
             }
-        }
-        log.info("Broadcasted to {} SSE client(s)", clients.size());
+        });
+
+        log.info("Broadcasted to {} SSE client(s): {}", clients.size(), data);
     }
 
     public int clientCount() {

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Status } from "../utils/constant";
 import { uploadImage, getAllImages, deleteImage } from "../services/api";
+import { createSSEConnection } from "../services/sse";
 
 const UploadContext = createContext();
 
@@ -10,6 +11,8 @@ export const UploadProvider = ({ children }) => {
   const [processedImage, setProcessedImage] = useState(null);
   const [status, setStatus] = useState(Status.welcome);
   const [items, setItems] = useState([]);
+  const [message, setMessage] = useState("");
+  const currentUploadIdRef = useRef(null);
 
   // Hàm tải dữ liệu lịch sử ảnh
   const fetchImages = async () => {
@@ -36,6 +39,54 @@ export const UploadProvider = ({ children }) => {
     fetchImages();
   }, []);
 
+  useEffect(() => {
+    const sse = createSSEConnection(
+      async (data) => {
+        console.log("Received SSE:", data);
+        console.log("currentUploadIdRef:", currentUploadIdRef.current);
+
+        await fetchImages();
+
+        if (!currentUploadIdRef.current) {
+          console.log("Skip SSE: currentUploadIdRef is null");
+          return;
+        }
+
+        if (data.user_id !== currentUploadIdRef.current) {
+          console.log("Skip SSE: ID mismatch", {
+            sseUserId: data.user_id,
+            currentUploadId: currentUploadIdRef.current,
+          });
+          return;
+        }
+
+        if (data.status === "processed") {
+          setProcessedImage(data.file_path);
+          setMessage("Upload thành công. Ảnh của bạn hợp lệ.");
+          setStatus(Status.completed);
+          currentUploadIdRef.current = null;
+        }
+
+        if (data.status === "rejected") {
+          setProcessedImage(null);
+          setMessage(
+            "Ảnh bị từ chối. Ảnh của bạn vi phạm tiêu chuẩn cộng đồng.",
+          );
+          setStatus(Status.error);
+          currentUploadIdRef.current = null;
+        }
+      },
+      (err) => {
+        console.error("SSE connection error", err);
+      },
+    );
+
+    return () => {
+      sse.close();
+      console.log("SSE closed");
+    };
+  }, []);
+
   // Chọn ảnh
   const handleImageChange = (event) => {
     const file = event.target.files[0];
@@ -43,30 +94,60 @@ export const UploadProvider = ({ children }) => {
     if (file) {
       setSelectedFile(file);
       setSelectedImage(URL.createObjectURL(file));
+      setProcessedImage(null);
+      setMessage("");
       setStatus(Status.upload);
     }
   };
 
   // Upload thật (có API)
+  // const handleUpload = async () => {
+  //   if (!selectedFile) return;
+
+  //   try {
+  //     setStatus(Status.processing);
+
+  //     // Gửi file đến backend
+  //     const res = await uploadImage(selectedFile);
+
+  //     const imageUrl = res.url || selectedImage;
+
+  //     setProcessedImage(imageUrl);
+
+  //     // Fetch lại lịch sử
+  //     await fetchImages();
+
+  //     setStatus(Status.completed);
+  //   } catch (err) {
+  //     console.error(err);
+  //     setStatus(Status.error);
+  //   }
+  // };
   const handleUpload = async () => {
     if (!selectedFile) return;
 
     try {
+      setProcessedImage(null);
+      setMessage("");
       setStatus(Status.processing);
 
-      // Gửi file đến backend
+      // upload file
       const res = await uploadImage(selectedFile);
 
-      const imageUrl = res.url || selectedImage;
+      // set ngay lập tức id để SSE có thể match
+      currentUploadIdRef.current = res?.fileName || res?.id || null;
 
-      setProcessedImage(imageUrl);
+      console.log("Upload response:", res);
+      console.log("currentUploadIdRef set to:", currentUploadIdRef.current);
 
-      // Fetch lại lịch sử
-      await fetchImages();
-
-      setStatus(Status.completed);
+      if (!currentUploadIdRef.current) {
+        setMessage("Không nhận được mã file từ server.");
+        setStatus(Status.error);
+        return;
+      }
     } catch (err) {
       console.error(err);
+      setMessage("Upload thất bại.");
       setStatus(Status.error);
     }
   };
@@ -120,6 +201,8 @@ export const UploadProvider = ({ children }) => {
         status,
         setStatus,
         items,
+        message,
+        setMessage,
         handleImageChange,
         handleUpload,
         toggleReport,

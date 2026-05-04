@@ -32,6 +32,7 @@ public class NotifyController {
             try {
                 emitter.send(SseEmitter.event().comment("ping"));
             } catch (Exception e) {
+                log.warn("Heartbeat failed, stopping scheduler: {}", e.getMessage());
                 scheduler.shutdown();
             }
         }, 5, 5, TimeUnit.SECONDS);
